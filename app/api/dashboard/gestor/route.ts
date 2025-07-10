@@ -79,28 +79,7 @@ export async function GET() {
       vendas: Number(row.vendas) || 0,
     }))
 
-    // 7. Top Clientes por Faturamento
-    const topClientesResult = await pool.query(
-      `SELECT 
-        COALESCE(customer, 'Cliente não identificado') as customer, 
-        COALESCE(SUM(CAST(total_price AS DECIMAL)), 0) as valor
-       FROM clone_propostas_apprudnik
-       WHERE has_generated_sale = true 
-       AND created_at >= '2023-01-01 00:00:00'
-       AND total_price IS NOT NULL
-       AND customer IS NOT NULL
-       GROUP BY customer
-       ORDER BY valor DESC
-       LIMIT 5`,
-      [period],
-    )
-
-    const topClientes = topClientesResult.rows.map((row) => ({
-      cliente: String(row.customer),
-      valor: Number(row.valor) || 0,
-    }))
-
-    // 8. Vendas com Fatura Emitida (usando is_invoice_issued)
+    // 7. Vendas com Fatura Emitida (usando is_invoice_issued)
     const vendasFaturadas = await pool.query(
       `SELECT COUNT(*) as total
        FROM clone_vendas_apprudnik
@@ -108,18 +87,6 @@ export async function GET() {
       [period],
     )
     const totalVendasFaturadas = Number(vendasFaturadas.rows[0]?.total) || 0
-
-    // 9. Propostas por Status
-    const propostasStatus = await pool.query(
-      `SELECT 
-        status,
-        COUNT(*) as quantidade
-       FROM clone_propostas_apprudnik
-       WHERE created_at >= '2023-01-01 00:00:00'
-       GROUP BY status
-       ORDER BY quantidade DESC`,
-      [period],
-    )
 
     const data = {
       totalFaturamento,
@@ -129,11 +96,6 @@ export async function GET() {
       taxaConversao: Number(taxaConversao.toFixed(2)),
       faturamentoMensal,
       vendasPorVendedor,
-      topClientes,
-      propostasStatus: propostasStatus.rows.map((row) => ({
-        status: String(row.status),
-        quantidade: Number(row.quantidade),
-      })),
     }
 
     return NextResponse.json(data)

@@ -8,10 +8,10 @@ type DashboardData = {
   totalFaturamento: number
   totalPropostas: number
   totalVendas: number
+  totalVendasFaturadas: number
   taxaConversao: number
   faturamentoMensal: { mes: string; faturamento: number }[]
   vendasPorVendedor: { vendedor: string; vendas: number }[]
-  topClientes: { cliente: string; valor: number }[]
 }
 
 export default function GestorDashboard({ data }: { data: DashboardData | null }) {
@@ -29,7 +29,7 @@ export default function GestorDashboard({ data }: { data: DashboardData | null }
             <div className="text-2xl font-bold">
               R$ {data.totalFaturamento.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
             </div>
-            <p className="text-xs text-muted-foreground">+20.1% em relação ao mês passado</p>
+            <p className="text-xs text-muted-foreground">Vendas com faturamento gerado</p>
           </CardContent>
         </Card>
         <Card>
@@ -38,8 +38,8 @@ export default function GestorDashboard({ data }: { data: DashboardData | null }
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+{data.totalVendas}</div>
-            <p className="text-xs text-muted-foreground">+180.1% em relação ao mês passado</p>
+            <div className="text-2xl font-bold">{data.totalVendas}</div>
+            <p className="text-xs text-muted-foreground">Total de vendas no período</p>
           </CardContent>
         </Card>
         <Card>
@@ -48,8 +48,8 @@ export default function GestorDashboard({ data }: { data: DashboardData | null }
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+{data.totalPropostas}</div>
-            <p className="text-xs text-muted-foreground">+19% em relação ao mês passado</p>
+            <div className="text-2xl font-bold">{data.totalPropostas}</div>
+            <p className="text-xs text-muted-foreground">Total de propostas criadas</p>
           </CardContent>
         </Card>
         <Card>
@@ -58,15 +58,17 @@ export default function GestorDashboard({ data }: { data: DashboardData | null }
             <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data.taxaConversao.toFixed(2)}%</div>
-            <p className="text-xs text-muted-foreground">+2% em relação ao mês passado</p>
+            <div className="text-2xl font-bold">{data.taxaConversao}%</div>
+            <p className="text-xs text-muted-foreground">Propostas convertidas em vendas</p>
           </CardContent>
         </Card>
       </div>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="lg:col-span-4">
           <CardHeader>
             <CardTitle>Faturamento Mensal</CardTitle>
+            <CardDescription>Evolução do faturamento nos últimos 12 meses</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <FaturamentoChart data={data.faturamentoMensal} />
@@ -75,41 +77,45 @@ export default function GestorDashboard({ data }: { data: DashboardData | null }
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>Vendas por Vendedor</CardTitle>
-            <CardDescription>Ranking de vendas no período.</CardDescription>
+            <CardDescription>Ranking de vendas no período</CardDescription>
           </CardHeader>
           <CardContent>
             <VendasVendedorChart data={data.vendasPorVendedor} />
           </CardContent>
         </Card>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Top Clientes</CardTitle>
-          <CardDescription>Clientes com maior faturamento no período.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Cliente</TableHead>
-                <TableHead className="text-right">Faturamento</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.topClientes.map((cliente) => (
-                <TableRow key={cliente.cliente}>
-                  <TableCell>
-                    <div className="font-medium">{cliente.cliente}</div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    R$ {cliente.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Vendas Faturadas</CardTitle>
+            
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{data.totalVendasFaturadas}</div>
+            <p className="text-xs text-muted-foreground">
+              {data.totalVendas > 0
+                ? `${((data.totalVendasFaturadas / data.totalVendas) * 100).toFixed(1)}% das vendas`
+                : "Nenhuma venda no período"}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Ticket Médio</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              R${" "}
+              {data.totalVendas > 0
+                ? (data.totalFaturamento / data.totalVendas).toLocaleString("pt-BR", { minimumFractionDigits: 2 })
+                : "0,00"}
+            </div>
+            <p className="text-xs text-muted-foreground">Valor médio por venda</p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
