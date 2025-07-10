@@ -1,32 +1,34 @@
 // test-db.js
-const { neon } = require('@neondatabase/serverless');
+const { Pool } = require('pg');
 
-// Carregar variáveis de ambiente
-require('dotenv').config({ path: '.env.local' });
-
-const connectionString = `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_DATABASE}?pgbouncer=true&connection_limit=1`;
-
-const sql = neon(connectionString);
+const pool = new Pool({
+  connectionString: "postgresql://postgres.axaubiodryinnxctuyca:090492@Matheus@aws-0-sa-east-1.pooler.supabase.com:5432/postgres",
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
 
 async function testConnection() {
   try {
-    console.log('🔗 Tentando conectar com:', {
-      host: process.env.DB_HOST,
-      port: process.env.DB_PORT,
-      database: process.env.DB_DATABASE,
-      user: process.env.DB_USER,
-      // Não mostrar a senha por segurança
-    });
+    const client = await pool.connect();
+    const result = await client.query('SELECT NOW() as current_time');
+    console.log('✅ Conexão com o banco estabelecida:', result.rows[0].current_time);
     
-    const result = await sql`SELECT NOW() as current_time`;
-    console.log('✅ Conexão com o banco estabelecida:', result[0].current_time);
+    // Testar se as tabelas existem
+    const tablesResult = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name LIKE 'clone_%'
+    `);
     
-    // Testar uma query nas suas tabelas
-    const userCount = await sql`SELECT COUNT(*) as total FROM clone_users_apprudnik`;
-    console.log('👥 Total de usuários na base:', userCount[0].total);
+    console.log('📋 Tabelas encontradas:', tablesResult.rows.map(row => row.table_name));
     
+    client.release();
   } catch (error) {
-    console.error('❌ Erro na conexão:', error.message);
+    console.error('❌ Erro na conexão:', error);
+  } finally {
+    await pool.end();
   }
 }
 

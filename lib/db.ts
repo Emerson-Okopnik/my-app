@@ -1,10 +1,15 @@
-import { neon } from "@neondatabase/serverless"
+import { Pool } from "pg"
 
 if (!process.env.DATABASE_URL) {
   throw new Error("A variável de ambiente DATABASE_URL não está definida.")
 }
 
-// A URL de conexão deve ser armazenada em uma variável de ambiente
-const sql = neon(process.env.DATABASE_URL)
+// Criar pool de conexões PostgreSQL
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false,
+  },
+})
 
-export default sql
+export default pool

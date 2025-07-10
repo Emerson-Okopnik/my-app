@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import sql from "@/lib/db"
+import pool from "@/lib/db"
 
 export async function GET() {
   try {
@@ -8,90 +8,144 @@ export async function GET() {
     twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12)
     const period = twelveMonthsAgo.toISOString().split("T")[0]
 
-    // 1. Faturamento Total
-    const faturamentoResult = await sql`
-      SELECT SUM(total_price) as total
-      FROM clone_propostas_apprudnik
-      WHERE has_generated_sale = true AND created_at >= ${period};
-    `
-    const totalFaturamento = faturamentoResult[0]?.total || 0
+    // 1. Faturamento Total (usando total_price que deve ser numérico)
+    const faturamentoResult = await pool.query(
+      `SELECT COALESCE(SUM(CAST(total_price AS DECIMAL)), 0) as total
+       FROM clone_propostas_apprudnik
+       WHERE has_generated_sale = true AND created_at >= '2023-01-01 00:00:00'`,
+      [period],
+    )
+    const totalFaturamento = Number(faturamentoResult.rows[0]?.total) || 0
 
     // 2. Total de Propostas
-    const propostasResult = await sql`
-      SELECT COUNT(*) as total
-      FROM clone_propostas_apprudnik
-      WHERE created_at >= ${period};
-    `
-    const totalPropostas = propostasResult[0]?.total || 0
+    const propostasResult = await pool.query(
+      `SELECT COUNT(*) as total
+       FROM clone_propostas_apprudnik
+       WHERE created_at >= '2023-01-01 00:00:00'`,
+      [period],
+    )
+    const totalPropostas = Number(propostasResult.rows[0]?.total) || 0
 
     // 3. Total de Vendas
-    const vendasResult = await sql`
-      SELECT COUNT(*) as total
-      FROM clone_vendas_apprudnik
-      WHERE created_at >= ${period};
-    `
-    const totalVendas = vendasResult[0]?.total || 0
+    const vendasResult = await pool.query(
+      `SELECT COUNT(*) as total
+       FROM clone_vendas_apprudnik
+       WHERE created_at >= '2023-01-01 00:00:00'`,
+      [period],
+    )
+    const totalVendas = Number(vendasResult.rows[0]?.total) || 0
 
     // 4. Taxa de Conversão (Propostas -> Vendas)
     const taxaConversao = totalPropostas > 0 ? (totalVendas / totalPropostas) * 100 : 0
 
     // 5. Faturamento Mensal (últimos 12 meses)
-    const faturamentoMensalResult = await sql`
-      SELECT 
+    const faturamentoMensalResult = await pool.query(
+      `SELECT 
         to_char(date_trunc('month', created_at), 'YYYY-MM') as month,
-        SUM(total_price) as faturamento
-      FROM clone_propostas_apprudnik
-      WHERE has_generated_sale = true AND created_at >= ${period}
-      GROUP BY 1
-      ORDER BY 1;
-    `
-    const faturamentoMensal = faturamentoMensalResult.map((row) => ({
-      mes: new Date(row.month + "-02").toLocaleString("default", { month: "long" }), // Gambiarra para pegar o nome do mês
-      faturamento: Number(row.faturamento),
-    }))
+        COALESCE(SUM(CAST(total_price AS DECIMAL)), 0) as faturamento
+       FROM clone_propostas_apprudnik
+       WHERE has_generated_sale = true 
+       AND created_at >= '2023-01-01 00:00:00'
+       AND total_price IS NOT NULL
+       GROUP BY 1
+       ORDER BY 1`,
+      [period],
+    )
+
+    const faturamentoMensal = faturamentoMensalResult.rows.map((row) => {
+      const monthDate = new Date(row.month + "-01")
+      return {
+        mes: monthDate.toLocaleString("pt-BR", { month: "long" }),
+        faturamento: Number(row.faturamento) || 0,
+      }
+    })
 
     // 6. Vendas por Vendedor
-    const vendasPorVendedorResult = await sql`
-      SELECT u.name as vendedor, COUNT(v.id) as vendas
-      FROM clone_vendas_apprudnik v
-      JOIN clone_users_apprudnik u ON v.seller = u.id
-      WHERE v.created_at >= ${period}
-      GROUP BY u.name
-      ORDER BY vendas DESC
-      LIMIT 10;
-    `
-    const vendasPorVendedor = vendasPorVendedorResult.map((row) => ({
-      vendedor: row.vendedor,
-      vendas: Number(row.vendas),
+    const vendasPorVendedorResult = await pool.query(
+      `SELECT 
+        COALESCE(u.name, 'Vendedor não identificado') as vendedor, 
+        COUNT(v.id) as vendas
+       FROM clone_vendas_apprudnik v
+       LEFT JOIN clone_users_apprudnik u ON v.seller = u.id
+       WHERE v.created_at >= '2023-01-01 00:00:00'
+       GROUP BY u.name
+       ORDER BY vendas DESC
+       LIMIT 10`,
+      [period],
+    )
+
+    const vendasPorVendedor = vendasPorVendedorResult.rows.map((row) => ({
+      vendedor: String(row.vendedor),
+      vendas: Number(row.vendas) || 0,
     }))
 
-    // 7. Top Clientes
-    const topClientesResult = await sql`
-        SELECT customer, SUM(total_price) as valor
-        FROM clone_propostas_apprudnik
-        WHERE has_generated_sale = true AND created_at >= ${period}
-        GROUP BY customer
-        ORDER BY valor DESC
-        LIMIT 5;
-    `
-    const topClientes = topClientesResult.map((row) => ({
-      cliente: row.customer,
-      valor: Number(row.valor),
+    // 7. Top Clientes por Faturamento
+    const topClientesResult = await pool.query(
+      `SELECT 
+        COALESCE(customer, 'Cliente não identificado') as customer, 
+        COALESCE(SUM(CAST(total_price AS DECIMAL)), 0) as valor
+       FROM clone_propostas_apprudnik
+       WHERE has_generated_sale = true 
+       AND created_at >= '2023-01-01 00:00:00'
+       AND total_price IS NOT NULL
+       AND customer IS NOT NULL
+       GROUP BY customer
+       ORDER BY valor DESC
+       LIMIT 5`,
+      [period],
+    )
+
+    const topClientes = topClientesResult.rows.map((row) => ({
+      cliente: String(row.customer),
+      valor: Number(row.valor) || 0,
     }))
+
+    // 8. Vendas com Fatura Emitida (usando is_invoice_issued)
+    const vendasFaturadas = await pool.query(
+      `SELECT COUNT(*) as total
+       FROM clone_vendas_apprudnik
+       WHERE is_invoice_issued = true AND created_at >= '2023-01-01 00:00:00'`,
+      [period],
+    )
+    const totalVendasFaturadas = Number(vendasFaturadas.rows[0]?.total) || 0
+
+    // 9. Propostas por Status
+    const propostasStatus = await pool.query(
+      `SELECT 
+        status,
+        COUNT(*) as quantidade
+       FROM clone_propostas_apprudnik
+       WHERE created_at >= '2023-01-01 00:00:00'
+       GROUP BY status
+       ORDER BY quantidade DESC`,
+      [period],
+    )
 
     const data = {
       totalFaturamento,
       totalPropostas,
       totalVendas,
-      taxaConversao,
+      totalVendasFaturadas,
+      taxaConversao: Number(taxaConversao.toFixed(2)),
       faturamentoMensal,
       vendasPorVendedor,
       topClientes,
+      propostasStatus: propostasStatus.rows.map((row) => ({
+        status: String(row.status),
+        quantidade: Number(row.quantidade),
+      })),
     }
 
     return NextResponse.json(data)
   } catch (error) {
     console.error("Erro na API:", error)
-    return NextResponse.json({ message: "Erro interno do servidor" }, { status: 500 })
+    return NextResponse.json(
+      {
+        message: "Erro interno do servidor",
+        error: error instanceof Error ? error.message : "Erro desconhecido",
+        stack: error instanceof Error ? error.stack : undefined,
+      },
+      { status: 500 },
+    )
   }
 }
