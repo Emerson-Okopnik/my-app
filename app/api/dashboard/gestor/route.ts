@@ -12,7 +12,7 @@ export async function GET() {
     const faturamentoResult = await pool.query(
       `SELECT COALESCE(SUM(CAST(total_price AS DECIMAL)), 0) as total
        FROM clone_propostas_apprudnik
-       WHERE has_generated_sale = true AND created_at >= '2023-01-01 00:00:00'`,
+       WHERE has_generated_sale = true AND created_at >= $1`,
       [period],
     )
     const totalFaturamento = Number(faturamentoResult.rows[0]?.total) || 0
@@ -21,7 +21,7 @@ export async function GET() {
     const propostasResult = await pool.query(
       `SELECT COUNT(*) as total
        FROM clone_propostas_apprudnik
-       WHERE created_at >= '2023-01-01 00:00:00'`,
+       WHERE created_at >= $1`,
       [period],
     )
     const totalPropostas = Number(propostasResult.rows[0]?.total) || 0
@@ -30,7 +30,7 @@ export async function GET() {
     const vendasResult = await pool.query(
       `SELECT COUNT(*) as total
        FROM clone_vendas_apprudnik
-       WHERE created_at >= '2023-01-01 00:00:00'`,
+       WHERE created_at >= $1`,
       [period],
     )
     const totalVendas = Number(vendasResult.rows[0]?.total) || 0
@@ -45,7 +45,7 @@ export async function GET() {
         COALESCE(SUM(CAST(total_price AS DECIMAL)), 0) as faturamento
        FROM clone_propostas_apprudnik
        WHERE has_generated_sale = true 
-       AND created_at >= '2023-01-01 00:00:00'
+       AND created_at >= $1
        AND total_price IS NOT NULL
        GROUP BY 1
        ORDER BY 1`,
@@ -67,7 +67,7 @@ export async function GET() {
         COUNT(v.id) as vendas
        FROM clone_vendas_apprudnik v
        LEFT JOIN clone_users_apprudnik u ON v.seller = u.id
-       WHERE v.created_at >= '2023-01-01 00:00:00'
+       WHERE v.created_at >= $1
        GROUP BY u.name
        ORDER BY vendas DESC
        LIMIT 10`,
@@ -83,7 +83,7 @@ export async function GET() {
     const vendasFaturadas = await pool.query(
       `SELECT COUNT(*) as total
        FROM clone_vendas_apprudnik
-       WHERE is_invoice_issued = true AND created_at >= '2023-01-01 00:00:00'`,
+       WHERE is_invoice_issued = true AND created_at >= $1`,
       [period],
     )
     const totalVendasFaturadas = Number(vendasFaturadas.rows[0]?.total) || 0

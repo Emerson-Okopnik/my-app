@@ -34,7 +34,7 @@ export default function FaturamentoChart({ data }: { data: any[] }) {
           cursor={false}
           content={<ChartTooltipContent formatter={(value) => `R$ ${Number(value).toLocaleString("pt-BR")}`} />}
         />
-        <Line dataKey="faturamento" type="monotone" stroke="var(--color-faturamento)" strokeWidth={2} dot={false} />
+        <Line dataKey="faturamento" type="monotone" stroke="var(--color-faturamento)"  strokeWidth={2} dot={false} />
       </LineChart>
     </ChartContainer>
   )
