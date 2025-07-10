@@ -16,8 +16,8 @@ import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Suspense } from "react"
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const cookieStore = cookies()
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const cookieStore = await cookies()
   const defaultOpen = cookieStore.get("sidebar:state")?.value === "true"
 
   return (
