@@ -1,9 +1,7 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
-import { DollarSign, Package, Users, ArrowUpRight } from "lucide-react"
-import FaturamentoChart from "@/components/faturamento-chart"
-import VendasVendedorChart from "@/components/vendas-vendedor-chart"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { FileCheck } from "lucide-react";
+import { DollarSign, Package, Users, ArrowUpRight, FileCheck, Calendar } from "lucide-react"
+import FaturamentoChart from "@/components/charts/faturamento-chart"
+import VendasVendedorChart from "@/components/charts/vendas-vendedor-chart"
 
 type DashboardData = {
   totalFaturamento: number
@@ -12,7 +10,11 @@ type DashboardData = {
   totalVendasFaturadas: number
   taxaConversao: number
   faturamentoMensal: { mes: string; faturamento: number }[]
-  vendasPorVendedor: { vendedor: string; vendas: number }[]
+  vendasPorVendedor: { vendedor: string; vendas: number; faturamento: number }[]
+  filtros?: {
+    periodo: string
+    equipe: string
+  }
 }
 
 export default function GestorDashboard({ data }: { data: DashboardData | null }) {
@@ -20,6 +22,24 @@ export default function GestorDashboard({ data }: { data: DashboardData | null }
 
   return (
     <div className="grid gap-4 md:gap-8">
+      {/* Informações dos filtros aplicados */}
+      {data.filtros && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-4 text-sm text-blue-700">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                <span>Período: {data.filtros.periodo}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                <span>{data.filtros.equipe}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -68,8 +88,8 @@ export default function GestorDashboard({ data }: { data: DashboardData | null }
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="lg:col-span-4">
           <CardHeader>
-            <CardTitle>Faturamento Mensal</CardTitle>
-            <CardDescription>Evolução do faturamento nos últimos 12 meses</CardDescription>
+            <CardTitle>Faturamento no Período</CardTitle>
+            <CardDescription>Evolução do faturamento mês a mês</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <FaturamentoChart data={data.faturamentoMensal} />
@@ -77,8 +97,8 @@ export default function GestorDashboard({ data }: { data: DashboardData | null }
         </Card>
         <Card className="lg:col-span-3">
           <CardHeader>
-            <CardTitle>Vendas por Vendedor</CardTitle>
-            <CardDescription>Ranking de vendas no período</CardDescription>
+            <CardTitle>Performance por Vendedor</CardTitle>
+            <CardDescription>Ranking de vendas no período selecionado</CardDescription>
           </CardHeader>
           <CardContent>
             <VendasVendedorChart data={data.vendasPorVendedor} />
