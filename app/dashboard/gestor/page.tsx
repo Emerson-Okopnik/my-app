@@ -7,7 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 type FilterState = {
   period: string
-  team: string
+  supervisor: string
+  vendedor: string
   startDate: string
   endDate: string
 }
@@ -18,7 +19,8 @@ export default function GestorPage() {
   const [error, setError] = useState<string | null>(null)
   const [filters, setFilters] = useState<FilterState>({
     period: "12months",
-    team: "all",
+    supervisor: "all",
+    vendedor: "all",
     startDate: "",
     endDate: "",
   })
@@ -31,7 +33,12 @@ export default function GestorPage() {
       const params = new URLSearchParams()
 
       if (currentFilters.period) params.append("period", currentFilters.period)
-      if (currentFilters.team && currentFilters.team !== "all") params.append("team", currentFilters.team)
+      if (currentFilters.supervisor && currentFilters.supervisor !== "all") {
+        params.append("supervisor", currentFilters.supervisor)
+      }
+      if (currentFilters.vendedor && currentFilters.vendedor !== "all") {
+        params.append("vendedor", currentFilters.vendedor)
+      }
       if (currentFilters.startDate) params.append("startDate", currentFilters.startDate)
       if (currentFilters.endDate) params.append("endDate", currentFilters.endDate)
 

@@ -2,6 +2,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { DollarSign, Package, Users, ArrowUpRight, FileCheck, Calendar } from "lucide-react"
 import FaturamentoChart from "@/components/charts/faturamento-chart"
 import VendasVendedorChart from "@/components/charts/vendas-vendedor-chart"
+import PerformanceSupervisionados from "./performance-supervisionados"
 
 type DashboardData = {
   totalFaturamento: number
@@ -11,9 +12,11 @@ type DashboardData = {
   taxaConversao: number
   faturamentoMensal: { mes: string; faturamento: number }[]
   vendasPorVendedor: { vendedor: string; vendas: number; faturamento: number }[]
+  performanceSupervisionados?: any[]
   filtros?: {
     periodo: string
-    equipe: string
+    supervisor: string
+    totalSupervisionados: number
   }
 }
 
@@ -33,7 +36,12 @@ export default function GestorDashboard({ data }: { data: DashboardData | null }
               </div>
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
-                <span>{data.filtros.equipe}</span>
+                <span>{data.filtros.supervisor}</span>
+                {data.filtros.totalSupervisionados > 0 && (
+                  <span className="bg-blue-200 px-2 py-1 rounded-full text-xs">
+                    {data.filtros.totalSupervisionados} supervisionado(s)
+                  </span>
+                )}
               </div>
             </div>
           </CardContent>
@@ -105,6 +113,14 @@ export default function GestorDashboard({ data }: { data: DashboardData | null }
           </CardContent>
         </Card>
       </div>
+
+      {/* Tabela de Performance dos Supervisionados */}
+      {data.performanceSupervisionados && data.performanceSupervisionados.length > 0 && (
+        <PerformanceSupervisionados
+          data={data.performanceSupervisionados}
+          supervisorNome={data.filtros?.supervisor || "Supervisor"}
+        />
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
